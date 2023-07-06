@@ -1,10 +1,8 @@
 use bevy_ecs::{
     component::Component,
-    entity::{Entity, EntityMapper, MapEntities},
-    reflect::ReflectComponentMapEntities,
+    entity::Entity,
     world::{FromWorld, World},
 };
-use bevy_reflect::Reflect;
 use std::ops::Deref;
 
 /// Holds a reference to the parent entity of this entity.
@@ -15,7 +13,6 @@ use std::ops::Deref;
 /// [`HierarchyQueryExt`]: crate::query_extension::HierarchyQueryExt
 /// [`Query`]: bevy_ecs::system::Query
 #[derive(Component, Debug, Eq, PartialEq)]
-#[reflect(Component, MapEntities, PartialEq)]
 pub struct Parent(pub(crate) Entity);
 
 impl Parent {
@@ -32,12 +29,6 @@ impl Parent {
 impl FromWorld for Parent {
     fn from_world(_world: &mut World) -> Self {
         Parent(Entity::PLACEHOLDER)
-    }
-}
-
-impl MapEntities for Parent {
-    fn map_entities(&mut self, entity_mapper: &mut EntityMapper) {
-        self.0 = entity_mapper.get_or_reserve(self.0);
     }
 }
 
