@@ -1,13 +1,5 @@
-use bevy_ecs::{
-    component::Component,
-    entity::{Entity, EntityMapper, MapEntities},
-    prelude::FromWorld,
-    reflect::{ReflectComponent, ReflectMapEntities},
-    world::World,
-};
-use bevy_reflect::Reflect;
+use bevy_ecs::{component::Component, entity::Entity, prelude::FromWorld, world::World};
 use core::slice;
-use smallvec::SmallVec;
 use std::ops::Deref;
 
 /// Contains references to the child entities of this entity.
@@ -16,17 +8,9 @@ use std::ops::Deref;
 ///
 /// [`HierarchyQueryExt`]: crate::query_extension::HierarchyQueryExt
 /// [`Query`]: bevy_ecs::system::Query
-#[derive(Component, Debug, Reflect)]
-#[reflect(Component, MapEntities)]
-pub struct Children(pub(crate) SmallVec<[Entity; 8]>);
+#[derive(Component, Debug)]
 
-impl MapEntities for Children {
-    fn map_entities(&mut self, entity_mapper: &mut EntityMapper) {
-        for entity in &mut self.0 {
-            *entity = entity_mapper.get_or_reserve(*entity);
-        }
-    }
-}
+pub struct Children(pub(crate) Vec<Entity>);
 
 // TODO: We need to impl either FromWorld or Default so Children can be registered as Reflect.
 // This is because Reflect deserialize by creating an instance and apply a patch on top.
@@ -34,14 +18,14 @@ impl MapEntities for Children {
 // into better ways to handle cases like this.
 impl FromWorld for Children {
     fn from_world(_world: &mut World) -> Self {
-        Children(SmallVec::new())
+        Children(Vec::new())
     }
 }
 
 impl Children {
     /// Constructs a [`Children`] component with the given entities.
     pub(crate) fn from_entities(entities: &[Entity]) -> Self {
-        Self(SmallVec::from_slice(entities))
+        Self(Vec::from(entities))
     }
 
     /// Swaps the child at `a_index` with the child at `b_index`.

@@ -1,7 +1,7 @@
 use bevy_ecs::{
     component::Component,
     entity::{Entity, EntityMapper, MapEntities},
-    reflect::{ReflectComponent, ReflectMapEntities},
+    reflect::ReflectComponentMapEntities,
     world::{FromWorld, World},
 };
 use bevy_reflect::Reflect;
@@ -14,7 +14,7 @@ use std::ops::Deref;
 ///
 /// [`HierarchyQueryExt`]: crate::query_extension::HierarchyQueryExt
 /// [`Query`]: bevy_ecs::system::Query
-#[derive(Component, Debug, Eq, PartialEq, Reflect)]
+#[derive(Component, Debug, Eq, PartialEq)]
 #[reflect(Component, MapEntities, PartialEq)]
 pub struct Parent(pub(crate) Entity);
 

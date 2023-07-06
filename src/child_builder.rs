@@ -6,7 +6,7 @@ use bevy_ecs::{
     system::{Command, Commands, EntityCommands},
     world::{EntityMut, World},
 };
-use smallvec::SmallVec;
+use smallvec::Vec;
 
 // Do not use `world.send_event_batch` as it prints error message when the Events are not available in the world,
 // even though it's a valid use case to execute commands on a world without events. Loading a GLTF file for example
@@ -96,7 +96,7 @@ fn update_old_parent(world: &mut World, child: Entity, parent: Entity) {
 ///
 /// Sends [`HierarchyEvent`]'s.
 fn update_old_parents(world: &mut World, parent: Entity, children: &[Entity]) {
-    let mut events: SmallVec<[HierarchyEvent; 8]> = SmallVec::with_capacity(children.len());
+    let mut events: Vec<[HierarchyEvent; 8]> = Vec::with_capacity(children.len());
     for &child in children {
         if let Some(previous) = update_parent(world, child, parent) {
             // Do nothing if the entity already has the correct parent.
@@ -120,7 +120,7 @@ fn update_old_parents(world: &mut World, parent: Entity, children: &[Entity]) {
 /// Removes entities in `children` from `parent`'s [`Children`], removing the component if it ends up empty.
 /// Also removes [`Parent`] component from `children`.
 fn remove_children(parent: Entity, children: &[Entity], world: &mut World) {
-    let mut events: SmallVec<[HierarchyEvent; 8]> = SmallVec::new();
+    let mut events: Vec<[HierarchyEvent; 8]> = Vec::new();
     if let Some(parent_children) = world.get::<Children>(parent) {
         for &child in children {
             if parent_children.contains(&child) {
@@ -178,7 +178,7 @@ impl Command for AddChild {
 #[derive(Debug)]
 pub struct InsertChildren {
     parent: Entity,
-    children: SmallVec<[Entity; 8]>,
+    children: Vec<Entity>,
     index: usize,
 }
 
@@ -194,7 +194,7 @@ impl Command for InsertChildren {
 #[derive(Debug)]
 pub struct PushChildren {
     parent: Entity,
-    children: SmallVec<[Entity; 8]>,
+    children: Vec<Entity>,
 }
 
 impl Command for PushChildren {
@@ -206,7 +206,7 @@ impl Command for PushChildren {
 /// Command that removes children from an entity, and removes these children's parent.
 pub struct RemoveChildren {
     parent: Entity,
-    children: SmallVec<[Entity; 8]>,
+    children: Vec<Entity>,
 }
 
 impl Command for RemoveChildren {
@@ -230,7 +230,7 @@ impl Command for ClearChildren {
 /// Command that clear all children from an entity, replacing them with the given children.
 pub struct ReplaceChildren {
     parent: Entity,
-    children: SmallVec<[Entity; 8]>,
+    children: Vec<Entity>,
 }
 
 impl Command for ReplaceChildren {
@@ -339,7 +339,7 @@ impl<'w, 's, 'a> BuildChildren for EntityCommands<'w, 's, 'a> {
         let mut builder = ChildBuilder {
             commands: self.commands(),
             push_children: PushChildren {
-                children: SmallVec::default(),
+                children: Vec::default(),
                 parent,
             },
         };
@@ -353,7 +353,7 @@ impl<'w, 's, 'a> BuildChildren for EntityCommands<'w, 's, 'a> {
     fn push_children(&mut self, children: &[Entity]) -> &mut Self {
         let parent = self.id();
         self.commands().add(PushChildren {
-            children: SmallVec::from(children),
+            children: Vec::from(children),
             parent,
         });
         self
@@ -362,7 +362,7 @@ impl<'w, 's, 'a> BuildChildren for EntityCommands<'w, 's, 'a> {
     fn insert_children(&mut self, index: usize, children: &[Entity]) -> &mut Self {
         let parent = self.id();
         self.commands().add(InsertChildren {
-            children: SmallVec::from(children),
+            children: Vec::from(children),
             index,
             parent,
         });
@@ -372,7 +372,7 @@ impl<'w, 's, 'a> BuildChildren for EntityCommands<'w, 's, 'a> {
     fn remove_children(&mut self, children: &[Entity]) -> &mut Self {
         let parent = self.id();
         self.commands().add(RemoveChildren {
-            children: SmallVec::from(children),
+            children: Vec::from(children),
             parent,
         });
         self
@@ -393,7 +393,7 @@ impl<'w, 's, 'a> BuildChildren for EntityCommands<'w, 's, 'a> {
     fn replace_children(&mut self, children: &[Entity]) -> &mut Self {
         let parent = self.id();
         self.commands().add(ReplaceChildren {
-            children: SmallVec::from(children),
+            children: Vec::from(children),
             parent,
         });
         self
@@ -590,7 +590,7 @@ mod tests {
         components::{Children, Parent},
         HierarchyEvent::{self, ChildAdded, ChildMoved, ChildRemoved},
     };
-    use smallvec::{smallvec, SmallVec};
+    use smallvec::{smallvec, Vec};
 
     use bevy_ecs::{
         component::Component,
@@ -796,7 +796,7 @@ mod tests {
         let child3 = entities[3];
         let child4 = entities[4];
 
-        let expected_children: SmallVec<[Entity; 8]> = smallvec![child1, child2];
+        let expected_children: Vec<Entity> = smallvec![child1, child2];
         assert_eq!(
             world.get::<Children>(parent).unwrap().0.clone(),
             expected_children
@@ -813,7 +813,7 @@ mod tests {
         }
         queue.apply(&mut world);
 
-        let expected_children: SmallVec<[Entity; 8]> = smallvec![child1, child3, child4, child2];
+        let expected_children: Vec<Entity> = smallvec![child1, child3, child4, child2];
         assert_eq!(
             world.get::<Children>(parent).unwrap().0.clone(),
             expected_children
@@ -828,7 +828,7 @@ mod tests {
         }
         queue.apply(&mut world);
 
-        let expected_children: SmallVec<[Entity; 8]> = smallvec![child3, child2];
+        let expected_children: Vec<Entity> = smallvec![child3, child2];
         assert_eq!(
             world.get::<Children>(parent).unwrap().0.clone(),
             expected_children
@@ -855,7 +855,7 @@ mod tests {
         let child1 = entities[1];
         let child2 = entities[2];
 
-        let expected_children: SmallVec<[Entity; 8]> = smallvec![child1, child2];
+        let expected_children: Vec<Entity> = smallvec![child1, child2];
         assert_eq!(
             world.get::<Children>(parent).unwrap().0.clone(),
             expected_children
@@ -894,7 +894,7 @@ mod tests {
         let child2 = entities[2];
         let child4 = entities[4];
 
-        let expected_children: SmallVec<[Entity; 8]> = smallvec![child1, child2];
+        let expected_children: Vec<Entity> = smallvec![child1, child2];
         assert_eq!(
             world.get::<Children>(parent).unwrap().0.clone(),
             expected_children
@@ -909,7 +909,7 @@ mod tests {
         }
         queue.apply(&mut world);
 
-        let expected_children: SmallVec<[Entity; 8]> = smallvec![child1, child4];
+        let expected_children: Vec<Entity> = smallvec![child1, child4];
         assert_eq!(
             world.get::<Children>(parent).unwrap().0.clone(),
             expected_children
@@ -934,7 +934,7 @@ mod tests {
         let child3 = entities[3];
         let child4 = entities[4];
 
-        let expected_children: SmallVec<[Entity; 8]> = smallvec![child1, child2];
+        let expected_children: Vec<Entity> = smallvec![child1, child2];
         assert_eq!(
             world.get::<Children>(parent).unwrap().0.clone(),
             expected_children
@@ -943,7 +943,7 @@ mod tests {
         assert_eq!(*world.get::<Parent>(child2).unwrap(), Parent(parent));
 
         world.entity_mut(parent).insert_children(1, &entities[3..]);
-        let expected_children: SmallVec<[Entity; 8]> = smallvec![child1, child3, child4, child2];
+        let expected_children: Vec<Entity> = smallvec![child1, child3, child4, child2];
         assert_eq!(
             world.get::<Children>(parent).unwrap().0.clone(),
             expected_children
@@ -953,7 +953,7 @@ mod tests {
 
         let remove_children = [child1, child4];
         world.entity_mut(parent).remove_children(&remove_children);
-        let expected_children: SmallVec<[Entity; 8]> = smallvec![child3, child2];
+        let expected_children: Vec<Entity> = smallvec![child3, child2];
         assert_eq!(
             world.get::<Children>(parent).unwrap().0.clone(),
             expected_children
