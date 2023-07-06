@@ -1,0 +1,26 @@
+[package]
+name = "bevy_parents_childs"
+version = "0.10.0"
+edition = "2021"
+description = "Provides hierarchy functionality for Bevy Engine"
+homepage = "https://bevyengine.org"
+repository = "https://github.com/bevyengine/bevy"
+license = "MIT OR Apache-2.0"
+keywords = ["bevy"]
+
+[features]
+trace = []
+bevy_app = ["dep:bevy_app"]
+
+[dependencies]
+# bevy
+bevy_app = { version = "*", optional = true }
+# bevy_core = { path = "../bevy_core", version = "0.11.0-dev" }
+# bevy_ecs = { version = "0.10", features = ["bevy_reflect"] }
+bevy_ecs = { version = "0.10" }
+bevy_log = { version = "0.10" }
+# bevy_reflect = { path = "../bevy_reflect", version = "0.11.0-dev", features = ["bevy"] }
+# bevy_utils = { path = "../bevy_utils", version = "0.11.0-dev" }
+
+# other
+# smallvec = { version = "1.6", features = ["serde", "union", "const_generics"] }
