@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::BTreeSet;
 
 use bevy_ecs::{
     entity::Entity,
@@ -6,7 +6,7 @@ use bevy_ecs::{
     system::Query,
 };
 
-use crate::{Children, Parent};
+use crate::{Children, Parents};
 
 /// An extension trait for [`Query`] that adds hierarchy related methods.
 pub trait HierarchyQueryExt<'w, 's, Q: WorldQuery, F: ReadOnlyWorldQuery> {
@@ -19,7 +19,7 @@ pub trait HierarchyQueryExt<'w, 's, Q: WorldQuery, F: ReadOnlyWorldQuery> {
     /// # Examples
     /// ```
     /// # use bevy_ecs::prelude::*;
-    /// # use bevy_hierarchy::prelude::*;
+    /// # use bevy_parents_childs::prelude::*;
     /// # #[derive(Component)]
     /// # struct Marker;
     /// fn system(query: Query<Entity, With<Marker>>, children_query: Query<&Children>) {
@@ -41,10 +41,10 @@ pub trait HierarchyQueryExt<'w, 's, Q: WorldQuery, F: ReadOnlyWorldQuery> {
     /// # Examples
     /// ```
     /// # use bevy_ecs::prelude::*;
-    /// # use bevy_hierarchy::prelude::*;
+    /// # use bevy_parents_childs::prelude::*;
     /// # #[derive(Component)]
     /// # struct Marker;
-    /// fn system(query: Query<Entity, With<Marker>>, parent_query: Query<&Parent>) {
+    /// fn system(query: Query<Entity, With<Marker>>, parent_query: Query<&Parents>) {
     ///     let entity = query.single();
     ///     for ancestor in parent_query.iter_ancestors(entity) {
     ///         // Do something!
@@ -54,7 +54,7 @@ pub trait HierarchyQueryExt<'w, 's, Q: WorldQuery, F: ReadOnlyWorldQuery> {
     /// ```
     fn iter_ancestors(&'w self, entity: Entity) -> AncestorIter<'w, 's, Q, F>
     where
-        Q::ReadOnly: WorldQuery<Item<'w> = &'w Parent>;
+        Q::ReadOnly: WorldQuery<Item<'w> = &'w Parents>;
 }
 
 impl<'w, 's, Q: WorldQuery, F: ReadOnlyWorldQuery> HierarchyQueryExt<'w, 's, Q, F>
@@ -69,7 +69,7 @@ impl<'w, 's, Q: WorldQuery, F: ReadOnlyWorldQuery> HierarchyQueryExt<'w, 's, Q, 
 
     fn iter_ancestors(&'w self, entity: Entity) -> AncestorIter<'w, 's, Q, F>
     where
-        Q::ReadOnly: WorldQuery<Item<'w> = &'w Parent>,
+        Q::ReadOnly: WorldQuery<Item<'w> = &'w Parents>,
     {
         AncestorIter::new(self, entity)
     }
@@ -83,7 +83,8 @@ where
     Q::ReadOnly: WorldQuery<Item<'w> = &'w Children>,
 {
     children_query: &'w Query<'w, 's, Q, F>,
-    vecdeque: VecDeque<Entity>,
+    visited: BTreeSet<Entity>,
+    nexts: BTreeSet<Entity>,
 }
 
 impl<'w, 's, Q: WorldQuery, F: ReadOnlyWorldQuery> DescendantIter<'w, 's, Q, F>
@@ -94,7 +95,8 @@ where
     pub fn new(children_query: &'w Query<'w, 's, Q, F>, entity: Entity) -> Self {
         DescendantIter {
             children_query,
-            vecdeque: children_query
+            visited: BTreeSet::new(),
+            nexts: children_query
                 .get(entity)
                 .into_iter()
                 .flatten()
@@ -111,47 +113,77 @@ where
     type Item = Entity;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let entity = self.vecdeque.pop_front()?;
+        if let Some(entity) = self.nexts.pop_first() {
+            self.visited.insert(entity);
+            let nexts = self
+                .children_query
+                .get(entity)
+                .into_iter()
+                .flatten()
+                .filter(|node| !self.visited.contains(*node))
+                .copied();
 
-        if let Ok(children) = self.children_query.get(entity) {
-            self.vecdeque.extend(children);
+            self.nexts.extend(nexts);
+
+            Some(entity)
+        } else {
+            None
         }
-
-        Some(entity)
     }
 }
 
 /// An [`Iterator`] of [`Entity`]s over the ancestors of an [`Entity`].
 pub struct AncestorIter<'w, 's, Q: WorldQuery, F: ReadOnlyWorldQuery>
 where
-    Q::ReadOnly: WorldQuery<Item<'w> = &'w Parent>,
+    Q::ReadOnly: WorldQuery<Item<'w> = &'w Parents>,
 {
     parent_query: &'w Query<'w, 's, Q, F>,
-    next: Option<Entity>,
+    visited: BTreeSet<Entity>,
+    nexts: BTreeSet<Entity>,
 }
 
 impl<'w, 's, Q: WorldQuery, F: ReadOnlyWorldQuery> AncestorIter<'w, 's, Q, F>
 where
-    Q::ReadOnly: WorldQuery<Item<'w> = &'w Parent>,
+    Q::ReadOnly: WorldQuery<Item<'w> = &'w Parents>,
 {
     /// Returns a new [`AncestorIter`].
     pub fn new(parent_query: &'w Query<'w, 's, Q, F>, entity: Entity) -> Self {
         AncestorIter {
             parent_query,
-            next: Some(entity),
+            visited: Default::default(),
+            nexts: parent_query
+                .get(entity)
+                .into_iter()
+                .flatten()
+                .copied()
+                .collect(),
         }
     }
 }
 
 impl<'w, 's, Q: WorldQuery, F: ReadOnlyWorldQuery> Iterator for AncestorIter<'w, 's, Q, F>
 where
-    Q::ReadOnly: WorldQuery<Item<'w> = &'w Parent>,
+    Q::ReadOnly: WorldQuery<Item<'w> = &'w Parents>,
 {
     type Item = Entity;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.next = self.parent_query.get(self.next?).ok().map(|p| p.get());
-        self.next
+        if let Some(entity) = self.nexts.pop_first() {
+            self.visited.insert(entity);
+            let nexts = self
+                .parent_query
+                .get(entity)
+                .into_iter()
+                .flatten()
+                .filter(|node| !self.visited.contains(*node))
+                .copied();
+
+            self.nexts.extend(nexts);
+
+            Some(entity)
+        } else {
+            None
+        }
     }
 }
 
@@ -163,7 +195,7 @@ mod tests {
         world::World,
     };
 
-    use crate::{query_extension::HierarchyQueryExt, BuildWorldChildren, Children, Parent};
+    use crate::{query_extension::HierarchyQueryExt, BuildWorldChildren, Children, Parents};
 
     #[derive(Component, PartialEq, Debug)]
     struct A(usize);
@@ -196,7 +228,7 @@ mod tests {
         world.entity_mut(a).push_children(&[b]);
         world.entity_mut(b).push_children(&[c]);
 
-        let mut system_state = SystemState::<(Query<&Parent>, Query<&A>)>::new(world);
+        let mut system_state = SystemState::<(Query<&Parents>, Query<&A>)>::new(world);
         let (parent_query, a_query) = system_state.get(world);
 
         let result: Vec<_> = a_query.iter_many(parent_query.iter_ancestors(c)).collect();

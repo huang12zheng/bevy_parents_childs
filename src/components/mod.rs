@@ -1,5 +1,5 @@
 mod children;
-mod parent;
+mod parents;
 
 pub use children::Children;
-pub use parent::Parent;
+pub use parents::Parents;

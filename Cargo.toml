@@ -14,11 +14,13 @@ bevy_app = ["dep:bevy_app"]
 
 [dependencies]
 # bevy
-bevy_app = { version = "*", optional = true }
+bevy_app = { version = "0.11", optional = true }
+# bevy_app = { git = "https://github.com/bevyengine/bevy", optional = true }
 # bevy_core = { path = "../bevy_core", version = "0.11.0-dev" }
 # bevy_ecs = { version = "0.10", features = ["bevy_reflect"] }
-bevy_ecs = { version = "0.10" }
-bevy_log = { version = "0.10" }
+bevy_ecs = { version = "0.11" }
+bevy_log = { version = "0.11" }
+bevy_utils = { version = "0.11" }
 # bevy_reflect = { path = "../bevy_reflect", version = "0.11.0-dev", features = ["bevy"] }
 # bevy_utils = { path = "../bevy_utils", version = "0.11.0-dev" }
 

@@ -1,4 +1,4 @@
-use crate::components::{Children, Parent};
+use crate::{components::Children, remove_children_unidirectional, Parents};
 use bevy_ecs::{
     entity::Entity,
     system::{Command, EntityCommands},
@@ -22,10 +22,9 @@ pub struct DespawnChildrenRecursive {
 
 /// Function for despawning an entity and all its children
 pub fn despawn_with_children_recursive(world: &mut World, entity: Entity) {
-    // first, make the entity's own parent forget about it
-    if let Some(parent) = world.get::<Parent>(entity).map(|parent| parent.0) {
-        if let Some(mut children) = world.get_mut::<Children>(parent) {
-            children.0.retain(|c| *c != entity);
+    if let Some(parents) = world.get::<Parents>(entity).map(|e| e.0.clone()) {
+        for parent in parents {
+            remove_children_unidirectional(world, &[entity], parent);
         }
     }
 
@@ -191,7 +190,12 @@ mod tests {
         }
         queue.apply(&mut world);
 
-        let parent_entity = world.get::<Children>(grandparent_entity).unwrap()[0];
+        let parent_entity = world
+            .get::<Children>(grandparent_entity)
+            .unwrap()
+            .first()
+            .unwrap()
+            .to_owned();
 
         {
             let mut commands = Commands::new(&mut queue, &world);
@@ -209,9 +213,9 @@ mod tests {
         results.sort_unstable_by_key(|(_, index)| *index);
 
         {
-            let children = world.get::<Children>(grandparent_entity).unwrap();
+            // let children = world.get::<Children>(grandparent_entity).unwrap();
             assert!(
-                !children.iter().any(|&i| i == parent_entity),
+                world.get::<Children>(grandparent_entity).is_none(),
                 "grandparent should no longer know about its child which has been removed"
             );
         }
